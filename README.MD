@@ -1,4 +1,4 @@
-Googlecalendar whatsapp script/extension (TBD)
+Google calendar whatsapp script/extension (TBD)
 
 Draft workflow so far
 
