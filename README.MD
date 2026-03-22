@@ -17,3 +17,5 @@ if I don't need to have whatsapp.web open for Node.js, which would be a massive 
 Extension is more safer, since the Node.js uses unofficial API, extension doesn't need QR code open as well, just needs whatsapp.web and browser extension open and enabled.
 
 
+You can always verify that the extension is working by opening Whatsapp Web, then opening Devtools Console (Cmd+Option+J for Mac or Ctrl + Shift + J for Windows), and check for [WA→GCal] loglines as seen in this image below!
+![DevTools Console Working.png]
