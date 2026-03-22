@@ -15,3 +15,5 @@ Node.js script requires QR scans, which usually resets always, I will test and s
 if I don't need to have whatsapp.web open for Node.js, which would be a massive Pro.
 
 Extension is more safer, since the Node.js uses unofficial API, extension doesn't need QR code open as well, just needs whatsapp.web and browser extension open and enabled.
+
+

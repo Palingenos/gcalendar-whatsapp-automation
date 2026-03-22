@@ -1,0 +1,46 @@
+{
+  "manifest_version": 3,
+  "name": "WhatsApp Reminder to Google Calendar",
+  "version": "1.0.0",
+  "description": "Detects 'Remind me to' messages in WhatsApp Web and creates Google Calendar events.",
+
+  "permissions": [
+    "identity",
+    "storage"
+  ],
+
+  "host_permissions": [
+    "https://web.whatsapp.com/*",
+    "https://www.googleapis.com/*"
+  ],
+
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["https://web.whatsapp.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "WA Reminder → GCal"
+  },
+
+  "oauth2": {
+    "client_id": "YOUR_GOOGLE_OAUTH_CLIENT_ID_HERE.apps.googleusercontent.com",
+    "scopes": [
+      "https://www.googleapis.com/auth/calendar.events"
+    ]
+  },
+
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
