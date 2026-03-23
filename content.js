@@ -31,8 +31,16 @@
     observer.observe(document.body, { childList: true, subtree: true });
   }
 
-  const TRIGGER_PHRASE = "remind me to";
+  const TRIGGER_PHRASE = "remind me to"; // → creates a Google Task
   const TARGET_CHAT = "you"; // The chat name to watch, lowercased for comparison.
+
+  // Any of these words followed by "at" at the start of a message → calendar event.
+  // e.g. "Meeting at 3 pm", "Class at 9 am tomorrow", "Exam at 2 pm Friday"
+  const EVENT_TRIGGER_WORDS = new Set([
+    "meeting", "class", "exam", "appointment", "call",
+    "dinner", "lunch", "interview", "session", "party",
+    "seminar", "workout", "date", "event",
+  ]);
 
   // Selectors to try when reading the active chat name, in order of preference.
   // Confirmed working: #main header span[dir="auto"] and header span[dir="auto"].
@@ -61,17 +69,31 @@
     return getActiveChatName() === TARGET_CHAT;
   }
 
-  // Parses a message string and extracts the reminder task.
-  // Returns the task string if the message matches, or null if it doesn't.
-  // e.g. "Remind me to call John" → "call John"
-  //      "Hey how are you"        → null
+  // Returns true if the message starts with "[trigger word] at".
+  // e.g. "Meeting at 3pm", "Class at 9 am tomorrow", "Exam at 2 pm Friday"
+  function isEventTrigger(lower) {
+    const match = lower.match(/^(\w+)\s+at\s+/);
+    return match ? EVENT_TRIGGER_WORDS.has(match[1]) : false;
+  }
+
+  // Parses a message and returns the text to send to the background, or null.
+  // "Remind me to buy milk"       → "buy milk"                     (task)
+  // "Meeting at 7 pm with mom"    → "Meeting at 7 pm with mom"     (event)
+  // "Class at 9 am tomorrow"      → "Class at 9 am tomorrow"       (event)
+  // "Hey how are you"             → null (ignored)
   function parseReminder(text) {
     const lower = text.toLowerCase();
-    if (!lower.startsWith(TRIGGER_PHRASE)) return null;
-    const task = text.slice(TRIGGER_PHRASE.length).trim();
-    // Ignore the trigger phrase sent with nothing after it.
-    if (!task) return null;
-    return task;
+
+    if (lower.startsWith(TRIGGER_PHRASE)) {
+      const task = text.slice(TRIGGER_PHRASE.length).trim();
+      return task || null;
+    }
+
+    if (isEventTrigger(lower)) {
+      return text.trim() || null;
+    }
+
+    return null;
   }
 
   // Persistent set of fingerprints for messages we've already processed.

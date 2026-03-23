@@ -58,7 +58,37 @@ function classifyColor(text) {
       if (lower.includes(kw)) return rule.color;
     }
   }
-  return "gray";
+  return "purple"; // Default when no keyword matches.
+}
+
+// Colors the user can explicitly mention at the end of a message.
+const SUPPORTED_COLORS = new Set(["red", "orange", "yellow", "green", "blue", "purple", "gray", "grey"]);
+
+// Any color word that exists in English but isn't in our supported set
+// maps to purple (the default for unrecognised explicit color mentions).
+const ALL_COLOR_WORDS = new Set([
+  ...SUPPORTED_COLORS,
+  "pink", "brown", "teal", "cyan", "magenta", "violet", "indigo",
+  "black", "white", "silver", "gold", "maroon", "navy", "lime", "coral",
+]);
+
+// Checks if the last word of the task text is a color the user explicitly set.
+// Returns { color, taskWithoutColor } — color is null if no color word found.
+function extractExplicitColor(task) {
+  const words = task.trim().split(/\s+/);
+  const lastWord = words[words.length - 1].toLowerCase();
+
+  if (ALL_COLOR_WORDS.has(lastWord)) {
+    const stripped = words.slice(0, -1).join(" ");
+    // Recognised and supported → use it directly. grey → gray.
+    if (SUPPORTED_COLORS.has(lastWord)) {
+      return { color: lastWord === "grey" ? "gray" : lastWord, taskWithoutColor: stripped };
+    }
+    // Recognised color word but not in our palette → default to purple.
+    return { color: "purple", taskWithoutColor: stripped };
+  }
+
+  return { color: null, taskWithoutColor: task };
 }
 
 // ─── Title normalization ──────────────────────────────────────────────────────
@@ -67,6 +97,8 @@ function classifyColor(text) {
 // e.g. "say good morning to riva in 2 days" → "Say good morning to riva"
 function normalizeTitle(task) {
   let title = task
+    .replace(/\bday after tomorrow\b/gi, "")
+    .replace(/\bnext\s+(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/gi, "")
     .replace(/\s+in\s+\d+\s+days?\b/gi, "")
     .replace(/\b(tomorrow|today|tonight|this weekend|next week)\b/gi, "")
     .replace(/\b(on\s+)?(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi, "")
@@ -98,24 +130,35 @@ function extractDateTime(text) {
   let hour = null;
   let minute = 0;
 
-  // ── Day extraction ──
-  if (/\btonight\b/.test(lower)) {
+  // ── Day extraction (most specific patterns checked first) ──
+  if (/\bday after tomorrow\b/.test(lower)) {
+    date = new Date(); date.setDate(date.getDate() + 2);
+  } else if (/\btonight\b/.test(lower)) {
     date = new Date(); hour = 20;
   } else if (/\btoday\b/.test(lower)) {
     date = new Date();
   } else if (/\btomorrow\b/.test(lower)) {
+    // "day after tomorrow" already caught above, so this is safe.
     date = new Date(); date.setDate(date.getDate() + 1);
   } else if (/\bthis weekend\b/.test(lower)) {
     date = getNextWeekday(6); hour = 10;
   } else if (/\bnext week\b/.test(lower)) {
     date = getNextWeekday(1); hour = 9;
   } else {
-    const inDays = lower.match(/\bin\s+(\d+)\s+days?\b/);
-    if (inDays) {
-      date = new Date(); date.setDate(date.getDate() + parseInt(inDays[1]));
+    // "next thursday" → skip to the week AFTER the nearest Thursday.
+    const nextDayMatch = lower.match(/\bnext\s+(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/);
+    if (nextDayMatch) {
+      const nearest = getNextWeekday(DAY_NAMES.indexOf(nextDayMatch[1]));
+      date = new Date(nearest); date.setDate(date.getDate() + 7);
     } else {
-      for (let i = 0; i < DAY_NAMES.length; i++) {
-        if (lower.includes(DAY_NAMES[i])) { date = getNextWeekday(i); break; }
+      const inDays = lower.match(/\bin\s+(\d+)\s+days?\b/);
+      if (inDays) {
+        date = new Date(); date.setDate(date.getDate() + parseInt(inDays[1]));
+      } else {
+        // Bare day name → nearest upcoming occurrence.
+        for (let i = 0; i < DAY_NAMES.length; i++) {
+          if (lower.includes(DAY_NAMES[i])) { date = getNextWeekday(i); break; }
+        }
       }
     }
   }
@@ -141,10 +184,15 @@ function extractDateTime(text) {
 
 // Produces a fully resolved, ready-to-create object from raw task text.
 function buildNormalized(rawTask) {
-  const type  = classifyType(rawTask);
-  const title = normalizeTitle(rawTask);
-  const color = classifyColor(rawTask);
-  const { date, hour, minute } = extractDateTime(rawTask);
+  // Check for an explicit color word at the end first.
+  // If found, strip it from the task text before further processing.
+  const { color: explicitColor, taskWithoutColor } = extractExplicitColor(rawTask);
+  const baseTask = taskWithoutColor;
+
+  const type  = classifyType(baseTask);
+  const title = normalizeTitle(baseTask);
+  const color = explicitColor !== null ? explicitColor : classifyColor(baseTask);
+  const { date, hour, minute } = extractDateTime(baseTask);
 
   const now = new Date();
   let finalDate = date ? new Date(date) : null;
@@ -182,7 +230,7 @@ function buildNormalized(rawTask) {
   const durationMinutes = type === "event" ? (isCall ? 30 : 60) : null;
 
   console.log("[WA→GCal] Normalized:", { type, title, date: finalDate.toISOString(), color, durationMinutes });
-  return { type, title, date: finalDate, color, durationMinutes, rawTask };
+  return { type, title, date: finalDate, color, durationMinutes, rawTask: baseTask };
 }
 
 // ─── Google Tasks API ─────────────────────────────────────────────────────────
