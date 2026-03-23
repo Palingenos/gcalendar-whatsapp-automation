@@ -56,6 +56,21 @@
     return node.querySelector(".copyable-text") !== null;
   }
 
+  const TRIGGER_PHRASE = "remind me to";
+
+  // Parses a message string and extracts the reminder task.
+  // Returns the task string if the message matches, or null if it doesn't.
+  // e.g. "Remind me to call John" → "call John"
+  //      "Hey how are you"        → null
+  function parseReminder(text) {
+    const lower = text.toLowerCase();
+    if (!lower.startsWith(TRIGGER_PHRASE)) return null;
+    const task = text.slice(TRIGGER_PHRASE.length).trim();
+    // Ignore the trigger phrase sent with nothing after it.
+    if (!task) return null;
+    return task;
+  }
+
   // Starts watching the message list for newly added messages.
   function watchMessages() {
     const observer = new MutationObserver((mutations) => {
@@ -66,8 +81,11 @@
           const text = getMessageText(node);
           if (!text) continue;
 
-          console.log("[WA→GCal] New message detected:", text);
-          // Stages 4 and 5 will parse and filter this message.
+          const task = parseReminder(text);
+          if (!task) continue;
+
+          console.log("[WA→GCal] Reminder detected:", task);
+          // Stage 5 will add the group chat filter before acting on this.
         }
       }
     });
