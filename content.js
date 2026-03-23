@@ -34,13 +34,26 @@
   const TRIGGER_PHRASE = "remind me to";
   const TARGET_CHAT = "you"; // The chat name to watch, lowercased for comparison.
 
-  // Reads the active chat name from the page title.
-  // WhatsApp Web sets document.title to "ChatName | WhatsApp" when a chat is open.
-  // Returns the chat name in lowercase, or null if no chat is open.
+  // Selectors to try when reading the active chat name, in order of preference.
+  // Confirmed working: #main header span[dir="auto"] and header span[dir="auto"].
+  // data-testid selectors kept as future-proofing in case WhatsApp re-adds them.
+  const CHAT_NAME_SELECTORS = [
+    '#main header span[dir="auto"]',
+    'header span[dir="auto"]',
+    '[data-testid="conversation-info-header-chat-title"]',
+    '[data-testid="conversation-info-header"] span[dir="auto"]',
+  ];
+
+  // Reads the active chat name by trying each known selector in order.
+  // Returns the first non-empty result, lowercased.
   function getActiveChatName() {
-    const parts = document.title.split("|");
-    if (parts.length < 2) return null;
-    return parts[0].trim().toLowerCase();
+    for (const selector of CHAT_NAME_SELECTORS) {
+      const el = document.querySelector(selector);
+      if (el && el.innerText.trim()) {
+        return el.innerText.trim().toLowerCase();
+      }
+    }
+    return null;
   }
 
   // Returns true only when the user is inside the target chat ("You").
@@ -112,6 +125,7 @@
               const fingerprint = getFingerprint(container, text);
               if (processedMessages.has(fingerprint)) return;
               processedMessages.add(fingerprint);
+
 
               // Ignore messages from any chat other than "You".
               if (!isTargetChat()) return;
