@@ -18,4 +18,4 @@ Extension is more safer, since the Node.js uses unofficial API, extension doesn'
 
 
 You can always verify that the extension is working by opening Whatsapp Web, then opening Devtools Console (Cmd+Option+J for Mac or Ctrl + Shift + J for Windows), and check for [WA→GCal] loglines as seen in this image below!
-![DevTools Console Working.png]
+![DevTools Console Working.png]!
