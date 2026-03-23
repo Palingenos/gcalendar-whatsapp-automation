@@ -134,6 +134,18 @@
               if (!task) return;
 
               console.log("[WA→GCal] Reminder detected:", task);
+
+              // Hand off to the background service worker for Google Calendar.
+              chrome.runtime.sendMessage(
+                { type: "REMINDER_DETECTED", task },
+                (response) => {
+                  if (chrome.runtime.lastError) {
+                    console.error("[WA→GCal] Failed to reach background:", chrome.runtime.lastError.message);
+                    return;
+                  }
+                  console.log("[WA→GCal] Background acknowledged:", response?.status);
+                }
+              );
             }, 0);
           }
         }
