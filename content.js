@@ -96,9 +96,31 @@
     return null;
   }
 
-  // Persistent set of fingerprints for messages we've already processed.
-  // Survives chat navigation because it lives in JS memory, not on DOM nodes.
+  // In-memory set of fingerprints — loaded from storage on startup so it
+  // survives page reloads, browser restarts, and chat navigation.
   const processedMessages = new Set();
+
+  // Loads previously stored fingerprints into the in-memory set.
+  function loadProcessedMessages() {
+    return new Promise((resolve) => {
+      chrome.storage.local.get("processedFingerprints", (result) => {
+        const stored = result.processedFingerprints || [];
+        stored.forEach((fp) => processedMessages.add(fp));
+        console.log(`[WA→GCal] Loaded ${stored.length} stored fingerprints.`);
+        resolve();
+      });
+    });
+  }
+
+  // Persists a new fingerprint to storage so it survives reloads.
+  // Keeps only the most recent 1000 to avoid unbounded growth.
+  function saveFingerprint(fingerprint) {
+    chrome.storage.local.get("processedFingerprints", (result) => {
+      const stored = result.processedFingerprints || [];
+      stored.push(fingerprint);
+      chrome.storage.local.set({ processedFingerprints: stored.slice(-1000) });
+    });
+  }
 
   // Builds a unique fingerprint for a message using its timestamp + text.
   // WhatsApp puts a data-pre-plain-text attribute (containing time + sender)
@@ -147,6 +169,7 @@
               const fingerprint = getFingerprint(container, text);
               if (processedMessages.has(fingerprint)) return;
               processedMessages.add(fingerprint);
+              saveFingerprint(fingerprint);
 
 
               // Ignore messages from any chat other than "You".
@@ -178,8 +201,9 @@
     console.log("[WA→GCal] MutationObserver active — watching for new messages.");
   }
 
-  // Entry point — all further logic starts here.
-  waitForApp(function () {
+  // Entry point — load stored fingerprints first, then start watching.
+  waitForApp(async function () {
+    await loadProcessedMessages();
     watchMessages();
   });
 })();

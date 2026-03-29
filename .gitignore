@@ -1,0 +1,15 @@
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Secrets / local config — never commit these
+secrets.json
+.env
+.env.local
+*.pem
+*.key
+
+# Your personal manifest with your real client ID
+# After cloning, copy manifest.template.json → manifest.json and fill in your client ID
+manifest.json

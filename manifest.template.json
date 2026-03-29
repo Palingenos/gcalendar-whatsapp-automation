@@ -33,7 +33,7 @@
   },
 
   "oauth2": {
-    "client_id": "YOUR_GOOGLE_OAUTH_CLIENT_ID_HERE.apps.googleusercontent.com",
+    "client_id": "YOUR_GOOGLE_OAUTH_CLIENT_ID.apps.googleusercontent.com",
     "scopes": [
       "https://www.googleapis.com/auth/calendar.events",
       "https://www.googleapis.com/auth/tasks"
